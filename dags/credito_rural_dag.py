@@ -25,47 +25,46 @@ engine = create_engine(DATABASE_URL)
     start_date=datetime(2024, 1, 1),
     schedule="@daily",
     catchup=False,
-    default_args={"owner": "Astro", "retries": 3},
+    #default_args={"owner": "Astro", "retries": 3},
     tags=["goiano analytics"],
 )
+
 def credito_rural_dag():
-    # Define tasks
+
     @task()
     def download_data(*anos):
         for ano in anos:
             url = f"https://www.bcb.gov.br/htms/sicor/DadosBrutos/SICOR_CONTRATOS_MUNICIPIO_{ano}.gz"
             r = requests.get(url)
-            path = f"C:/Users/vinic/OneDrive/Documentos/python/airflow_dbt_pipeline/include/{ano}.gz"
+            path = f"./{ano}.gz"
             with open(path, "wb") as f:
                 f.write(r.content)
-        return path[0:71]
-
+    
     @task()
-    def unzip(path):
-        for file in os.listdir(path):
+    def unzip():
+        for file in os.listdir("./"):
             if file.endswith(".gz"):
-                zip_url = os.path.join(path, file)
+                zip_url = os.path.join(file)
                 output_file = zip_url[:-3] + ".csv"
                 with gzip.open(zip_url, 'rb') as f_in:
                     with open(output_file, 'wb') as f_out:
                         shutil.copyfileobj(f_in, f_out)
-    
+
     @task()
-    def to_postgres(path):
+    def to_postgres():
         df_final = pd.DataFrame()
-        for file in os.listdir(path):
-            csv_url = os.path.join(path, file)
+        for file in os.listdir("./"):
+            csv_url = os.path.join(file)
             if file.endswith(".csv"):
                 df = pd.read_csv(csv_url, sep="|", encoding="iso-8859-2")
                 df_final = pd.concat([df_final, df])
-        df.to_sql('creditorural', engine, if_exists='replace', index=True)
+        df_final.to_sql('creditorural', engine, if_exists='replace', index=True)
     
-    path = download_data(2024)
+    download_data(2024)
 
-    unzip(path)
+    unzip()
 
-    to_postgres(path)
-
+    to_postgres()
 
 # Instantiate the DAG
 credito_rural_dag()
