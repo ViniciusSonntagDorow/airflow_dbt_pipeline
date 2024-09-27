@@ -59,6 +59,8 @@ def credito_rural_dag():
                 df = pd.read_csv(csv_url, sep="|", encoding="iso-8859-2")
                 df_final = pd.concat([df_final, df])
         df_final.to_sql('creditorural', engine, if_exists='replace', index=True)
+        # df_final.to_csv('creditorural', index=False)
+        # print(df_final)
     
     download_data(2024)
 
